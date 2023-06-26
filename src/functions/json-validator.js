@@ -1,11 +1,27 @@
 import * as core from '@actions/core'
 import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
 import {readFileSync} from 'fs'
 import {globSync} from 'glob'
 import {parse} from 'yaml'
 
+const insensitivePattern = /\(\?i\)/
 // setup the ajv instance
-const ajv = new Ajv() // options can be passed, e.g. {allErrors: true}
+const ajv = new Ajv({
+  strict: false,
+  code: {
+    regExp: (pattern, u) => {
+      let flags = u
+      let newPattern = pattern
+      if (insensitivePattern.test(pattern)) {
+        newPattern = newPattern.replace(insensitivePattern, '')
+        flags += 'i'
+      }
+      return new RegExp(newPattern, flags)
+    }
+  }
+}) // options can be passed, e.g. {allErrors: true}
+addFormats(ajv)
 
 // Helper function to setup the schema
 // :param jsonSchema: path to the jsonSchema file
