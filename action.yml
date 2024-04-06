@@ -2,8 +2,8 @@ name: "json-yaml-validate"
 description: "A GitHub Action to quickly validate JSON and YAML files in a repository"
 author: "Grant Birkinbine"
 branding:
-  icon: 'check'
-  color: 'green'
+  icon: "check"
+  color: "green"
 inputs:
   github_token:
     description: The GitHub token used to create an authenticated client - Provided for you by default!
@@ -21,7 +21,7 @@ inputs:
     description: The base directory to search for JSON and YAML files (e.g. ./src) - Default is "." which searches the entire repository
     required: false
     default: "."
-  json_schema:
+  schema_dir:
     description: The full path to the JSON schema file (e.g. ./schemas/schema.json) - Default is "" which doesn't enforce a strict schema
     required: false
     default: ""

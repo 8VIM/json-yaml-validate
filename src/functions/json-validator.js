@@ -2,44 +2,38 @@ import * as core from '@actions/core'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import {readFileSync} from 'fs'
-import {globSync} from 'glob'
+import {globSync, glob} from 'glob'
 import {parse} from 'yaml'
 
 const insensitivePattern = /\(\?i\)/
-// setup the ajv instance
-const ajv = new Ajv({
-  strict: false,
-  code: {
-    regExp: (pattern, u) => {
-      let flags = u
-      let newPattern = pattern
-      if (insensitivePattern.test(pattern)) {
-        newPattern = newPattern.replace(insensitivePattern, '')
-        flags += 'i'
-      }
-      return new RegExp(newPattern, flags)
-    }
-  }
-}) // options can be passed, e.g. {allErrors: true}
-addFormats(ajv)
 
-// Helper function to setup the schema
-// :param jsonSchema: path to the jsonSchema file
-// :returns: the compiled schema
-async function schema(jsonSchema) {
-  // if a jsonSchema is provided, validate the json against it
-  var schema
-  if (jsonSchema && jsonSchema !== '') {
-    // parse the jsonSchema from the file path
-    schema = JSON.parse(readFileSync(jsonSchema, 'utf8'))
-  } else {
-    // if no jsonSchema is provided, use the default schema
-    schema = true
+async function schema(schemaDir) {
+  const files = await glob(`${schemaDir}/*.json`)
+
+  const schemas = []
+  for (const file in files) {
+    const schema = JSON.parse(readFileSync(file, 'utf8'))
+    schemas.push(schema)
   }
+  const ajv = new Ajv({
+    strict: false,
+    code: {
+      regExp: (pattern, u) => {
+        let flags = u
+        let newPattern = pattern
+        if (insensitivePattern.test(pattern)) {
+          newPattern = newPattern.replace(insensitivePattern, '')
+          flags += 'i'
+        }
+        return new RegExp(newPattern, flags)
+      }
+    },
+    schemas
+  }) // options can be passed, e.g. {allErrors: true}
+  addFormats(ajv)
 
   // compile the schema
-  const validate = ajv.compile(schema)
-  return validate
+  return ajv.getSchema('https://8vim.github.io/schemas/schema')
 }
 
 // Helper function to validate all json files in the baseDir
@@ -47,7 +41,7 @@ export async function jsonValidator(exclude) {
   const baseDir = core.getInput('base_dir').trim()
   const jsonExtension = core.getInput('json_extension').trim()
   const jsonExcludeRegex = core.getInput('json_exclude_regex').trim()
-  const jsonSchema = core.getInput('json_schema').trim()
+  const schemaDir = core.getInput('schema_dir').trim()
   const yamlAsJson = core.getInput('yaml_as_json').trim() === 'true'
   const yamlExtension = core.getInput('yaml_extension').trim()
   const yamlExtensionShort = core.getInput('yaml_extension_short').trim()
@@ -62,7 +56,7 @@ export async function jsonValidator(exclude) {
   }
 
   // setup the schema (if provided)
-  const validate = await schema(jsonSchema)
+  const validate = await schema(schemaDir)
 
   // loop through all json files in the baseDir and validate them
   var result = {
@@ -86,12 +80,6 @@ export async function jsonValidator(exclude) {
   for (const file of files) {
     // construct the full path to the file
     const fullPath = `${baseDirSanitized}/${file}`
-
-    if (jsonSchema !== '' && fullPath.includes(jsonSchema)) {
-      // skip the jsonSchema file and don't count it as a skipped file
-      core.debug(`skipping json schema file: ${fullPath}`)
-      continue
-    }
 
     // If an exclude regex is provided, skip json files that match
     if (skipRegex !== null) {
