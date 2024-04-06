@@ -35339,8 +35339,8 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/ajv.js
-var ajv = __nccwpck_require__(2426);
-var ajv_default = /*#__PURE__*/__nccwpck_require__.n(ajv);
+var dist_ajv = __nccwpck_require__(2426);
+var ajv_default = /*#__PURE__*/__nccwpck_require__.n(dist_ajv);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var dist = __nccwpck_require__(567);
 var dist_default = /*#__PURE__*/__nccwpck_require__.n(dist);
@@ -43133,40 +43133,34 @@ var yaml_dist = __nccwpck_require__(4083);
 
 
 const insensitivePattern = /\(\?i\)/
-// setup the ajv instance
-const json_validator_ajv = new (ajv_default())({
-  strict: false,
-  code: {
-    regExp: (pattern, u) => {
-      let flags = u
-      let newPattern = pattern
-      if (insensitivePattern.test(pattern)) {
-        newPattern = newPattern.replace(insensitivePattern, '')
-        flags += 'i'
-      }
-      return new RegExp(newPattern, flags)
-    }
-  }
-}) // options can be passed, e.g. {allErrors: true}
-dist_default()(json_validator_ajv)
 
-// Helper function to setup the schema
-// :param jsonSchema: path to the jsonSchema file
-// :returns: the compiled schema
-async function schema(jsonSchema) {
-  // if a jsonSchema is provided, validate the json against it
-  var schema
-  if (jsonSchema && jsonSchema !== '') {
-    // parse the jsonSchema from the file path
-    schema = JSON.parse((0,external_fs_.readFileSync)(jsonSchema, 'utf8'))
-  } else {
-    // if no jsonSchema is provided, use the default schema
-    schema = true
+async function schema(schemaName, schemaDir) {
+  const files = await glob(`${schemaDir}/*.json`)
+
+  const schemas = []
+  for (const file in files) {
+    const schema = JSON.parse((0,external_fs_.readFileSync)(file, 'utf8'))
+    schemas.push(schema)
   }
+  const ajv = new (ajv_default())({
+    strict: false,
+    code: {
+      regExp: (pattern, u) => {
+        let flags = u
+        let newPattern = pattern
+        if (insensitivePattern.test(pattern)) {
+          newPattern = newPattern.replace(insensitivePattern, '')
+          flags += 'i'
+        }
+        return new RegExp(newPattern, flags)
+      }
+    },
+    schemas
+  }) // options can be passed, e.g. {allErrors: true}
+  dist_default()(ajv)
 
   // compile the schema
-  const validate = json_validator_ajv.compile(schema)
-  return validate
+  return ajv.getSchema(schemaName)
 }
 
 // Helper function to validate all json files in the baseDir
@@ -43174,7 +43168,8 @@ async function jsonValidator(exclude) {
   const baseDir = core.getInput('base_dir').trim()
   const jsonExtension = core.getInput('json_extension').trim()
   const jsonExcludeRegex = core.getInput('json_exclude_regex').trim()
-  const jsonSchema = core.getInput('json_schema').trim()
+  const schemaDir = core.getInput('schema_dir').trim()
+  const schemaName = core.getInput('schema_name').trim()
   const yamlAsJson = core.getInput('yaml_as_json').trim() === 'true'
   const yamlExtension = core.getInput('yaml_extension').trim()
   const yamlExtensionShort = core.getInput('yaml_extension_short').trim()
@@ -43189,7 +43184,7 @@ async function jsonValidator(exclude) {
   }
 
   // setup the schema (if provided)
-  const validate = await schema(jsonSchema)
+  const validate = await schema(schemaName, schemaDir)
 
   // loop through all json files in the baseDir and validate them
   var result = {
@@ -43213,12 +43208,6 @@ async function jsonValidator(exclude) {
   for (const file of files) {
     // construct the full path to the file
     const fullPath = `${baseDirSanitized}/${file}`
-
-    if (jsonSchema !== '' && fullPath.includes(jsonSchema)) {
-      // skip the jsonSchema file and don't count it as a skipped file
-      core.debug(`skipping json schema file: ${fullPath}`)
-      continue
-    }
 
     // If an exclude regex is provided, skip json files that match
     if (skipRegex !== null) {
