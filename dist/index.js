@@ -43152,9 +43152,7 @@ dist_default()(json_validator_ajv)
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
   const files = await glob('*.json', {cwd: baseDirSanitized})
-  json_validator_ajv.addSchema
   const schemas = {}
-  files.reduce()
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse((0,external_fs_.readFileSync)(fullPath, 'utf8'))

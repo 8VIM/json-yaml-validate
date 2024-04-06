@@ -25,9 +25,7 @@ addFormats(ajv)
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
   const files = await glob('*.json', {cwd: baseDirSanitized})
-  ajv.addSchema
   const schemas = {}
-  files.reduce()
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse(readFileSync(fullPath, 'utf8'))
