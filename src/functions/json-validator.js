@@ -1,41 +1,39 @@
 import * as core from '@actions/core'
-import Ajv from 'ajv'
+import Ajv2019 from 'ajv/dist/2019'
 import addFormats from 'ajv-formats'
 import {readFileSync} from 'fs'
 import {globSync, glob} from 'glob'
 import {parse} from 'yaml'
 
 const insensitivePattern = /\(\?i\)/
-const ajv = new Ajv({
-  strict: false,
-  code: {
-    regExp: (pattern, u) => {
-      let flags = u
-      let newPattern = pattern
-      if (insensitivePattern.test(pattern)) {
-        newPattern = newPattern.replace(insensitivePattern, '')
-        flags += 'i'
-      }
-      return new RegExp(newPattern, flags)
-    }
-  }
-}) // options can be passed, e.g. {allErrors: true}
-addFormats(ajv)
 
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
   const files = await glob('*.json', {cwd: baseDirSanitized})
-  const schemas = {}
+  const schemas = []
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse(readFileSync(fullPath, 'utf8'))
-    schemas[file] = schema
+    schemas.push(schema)
   }
-  const rootSchema = schemas[schemaName]
-  delete schemas[schemaName]
+  const ajv = new Ajv2019({
+    strict: false,
+    code: {
+      regExp: (pattern, u) => {
+        let flags = u
+        let newPattern = pattern
+        if (insensitivePattern.test(pattern)) {
+          newPattern = newPattern.replace(insensitivePattern, '')
+          flags += 'i'
+        }
+        return new RegExp(newPattern, flags)
+      }
+    },
+    schemas
+  }) // options can be passed, e.g. {allErrors: true}
+  addFormats(ajv)
 
-  // compile the schema
-  return ajv.addSchema(Object.values(schemas)).compile(rootSchema)
+  return ajv.getSchema(schemaName)
 }
 
 // Helper function to validate all json files in the baseDir
