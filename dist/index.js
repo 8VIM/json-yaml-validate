@@ -43139,7 +43139,7 @@ async function schema(schemaName, schemaDir) {
   const files = await glob('*.json', {cwd: baseDirSanitized})
 
   const schemas = []
-  for (const file in files) {
+  for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse((0,external_fs_.readFileSync)(fullPath, 'utf8'))
     schemas.push(schema)
