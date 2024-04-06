@@ -35339,8 +35339,8 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/ajv.js
-var dist_ajv = __nccwpck_require__(2426);
-var ajv_default = /*#__PURE__*/__nccwpck_require__.n(dist_ajv);
+var ajv = __nccwpck_require__(2426);
+var ajv_default = /*#__PURE__*/__nccwpck_require__.n(ajv);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var dist = __nccwpck_require__(567);
 var dist_default = /*#__PURE__*/__nccwpck_require__.n(dist);
@@ -43133,36 +43133,38 @@ var yaml_dist = __nccwpck_require__(4083);
 
 
 const insensitivePattern = /\(\?i\)/
+const json_validator_ajv = new (ajv_default())({
+  strict: false,
+  code: {
+    regExp: (pattern, u) => {
+      let flags = u
+      let newPattern = pattern
+      if (insensitivePattern.test(pattern)) {
+        newPattern = newPattern.replace(insensitivePattern, '')
+        flags += 'i'
+      }
+      return new RegExp(newPattern, flags)
+    }
+  }
+}) // options can be passed, e.g. {allErrors: true}
+dist_default()(json_validator_ajv)
 
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
   const files = await glob('*.json', {cwd: baseDirSanitized})
-
-  const schemas = []
+  json_validator_ajv.addSchema
+  const schemas = {}
+  files.reduce()
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse((0,external_fs_.readFileSync)(fullPath, 'utf8'))
-    schemas.push(schema)
+    schemas[file] = schema
   }
-  const ajv = new (ajv_default())({
-    strict: false,
-    code: {
-      regExp: (pattern, u) => {
-        let flags = u
-        let newPattern = pattern
-        if (insensitivePattern.test(pattern)) {
-          newPattern = newPattern.replace(insensitivePattern, '')
-          flags += 'i'
-        }
-        return new RegExp(newPattern, flags)
-      }
-    },
-    schemas
-  }) // options can be passed, e.g. {allErrors: true}
-  dist_default()(ajv)
+  const rootSchema = schemas[schemaName]
+  delete schemas[schemaName]
 
   // compile the schema
-  return ajv.getSchema(schemaName)
+  return json_validator_ajv.addSchema(Object.values(schemas)).compile(rootSchema)
 }
 
 // Helper function to validate all json files in the baseDir

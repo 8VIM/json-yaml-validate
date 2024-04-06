@@ -6,36 +6,38 @@ import {globSync, glob} from 'glob'
 import {parse} from 'yaml'
 
 const insensitivePattern = /\(\?i\)/
+const ajv = new Ajv({
+  strict: false,
+  code: {
+    regExp: (pattern, u) => {
+      let flags = u
+      let newPattern = pattern
+      if (insensitivePattern.test(pattern)) {
+        newPattern = newPattern.replace(insensitivePattern, '')
+        flags += 'i'
+      }
+      return new RegExp(newPattern, flags)
+    }
+  }
+}) // options can be passed, e.g. {allErrors: true}
+addFormats(ajv)
 
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
   const files = await glob('*.json', {cwd: baseDirSanitized})
-
-  const schemas = []
+  ajv.addSchema
+  const schemas = {}
+  files.reduce()
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
     const schema = JSON.parse(readFileSync(fullPath, 'utf8'))
-    schemas.push(schema)
+    schemas[file] = schema
   }
-  const ajv = new Ajv({
-    strict: false,
-    code: {
-      regExp: (pattern, u) => {
-        let flags = u
-        let newPattern = pattern
-        if (insensitivePattern.test(pattern)) {
-          newPattern = newPattern.replace(insensitivePattern, '')
-          flags += 'i'
-        }
-        return new RegExp(newPattern, flags)
-      }
-    },
-    schemas
-  }) // options can be passed, e.g. {allErrors: true}
-  addFormats(ajv)
+  const rootSchema = schemas[schemaName]
+  delete schemas[schemaName]
 
   // compile the schema
-  return ajv.getSchema(schemaName)
+  return ajv.addSchema(Object.values(schemas)).compile(rootSchema)
 }
 
 // Helper function to validate all json files in the baseDir
