@@ -8,11 +8,13 @@ import {parse} from 'yaml'
 const insensitivePattern = /\(\?i\)/
 
 async function schema(schemaName, schemaDir) {
-  const files = await glob(`${schemaDir}/*.json`)
+  const baseDirSanitized = schemaDir.replace(/\/$/, '')
+  const files = await glob('*.json', {cwd: baseDirSanitized})
 
   const schemas = []
   for (const file in files) {
-    const schema = JSON.parse(readFileSync(file, 'utf8'))
+    const fullPath = `${baseDirSanitized}/${file}`
+    const schema = JSON.parse(readFileSync(fullPath, 'utf8'))
     schemas.push(schema)
   }
   const ajv = new Ajv({
