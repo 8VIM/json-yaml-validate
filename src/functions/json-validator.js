@@ -7,7 +7,7 @@ import {parse} from 'yaml'
 
 const insensitivePattern = /\(\?i\)/
 
-async function schema(schemaDir) {
+async function schema(schemaName, schemaDir) {
   const files = await glob(`${schemaDir}/*.json`)
 
   const schemas = []
@@ -33,7 +33,7 @@ async function schema(schemaDir) {
   addFormats(ajv)
 
   // compile the schema
-  return ajv.getSchema('https://8vim.github.io/schemas/schema')
+  return ajv.getSchema(schemaName)
 }
 
 // Helper function to validate all json files in the baseDir
@@ -42,6 +42,7 @@ export async function jsonValidator(exclude) {
   const jsonExtension = core.getInput('json_extension').trim()
   const jsonExcludeRegex = core.getInput('json_exclude_regex').trim()
   const schemaDir = core.getInput('schema_dir').trim()
+  const schemaName = core.getInput('schema_name').trim()
   const yamlAsJson = core.getInput('yaml_as_json').trim() === 'true'
   const yamlExtension = core.getInput('yaml_extension').trim()
   const yamlExtensionShort = core.getInput('yaml_extension_short').trim()
@@ -56,7 +57,7 @@ export async function jsonValidator(exclude) {
   }
 
   // setup the schema (if provided)
-  const validate = await schema(schemaDir)
+  const validate = await schema(schemaName, schemaDir)
 
   // loop through all json files in the baseDir and validate them
   var result = {

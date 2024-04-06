@@ -23,7 +23,11 @@ inputs:
     default: "."
   schema_dir:
     description: The full path to the JSON schema file (e.g. ./schemas/schema.json) - Default is "" which doesn't enforce a strict schema
-    required: false
+    required: true
+    default: ""
+  schema_name:
+    description: Name of the root schema
+    required: true
     default: ""
   json_extension:
     description: The file extension for JSON files (e.g. .json) - Default is ".json"
