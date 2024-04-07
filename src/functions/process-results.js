@@ -7,22 +7,22 @@ import dedent from 'dedent-js'
 // :param results: the results of the validation
 // :param type: the type of validation (json or yaml)
 // :returns: true if the results are valid, false if they are not
-async function checkResults(results, type) {
+async function checkResults(results) {
   // check if there were any scanned files
   if (results.passed === 0 && results.failed === 0) {
-    core.info(`🔎 no ${type} files were detected`)
+    core.info(`🔎 no files were detected`)
     return true
   }
 
   // print a nice success message if there were no errors
   if (results.success === true) {
-    core.info(`✅ all ${results.passed} detected ${type} files are valid`)
+    core.info(`✅ all ${results.passed} detected files are valid`)
     return true
   }
 
   // print the results of the validation if there were errors
   core.info(
-    `${type} Validation Results:\n  - Passed: ${results.passed}\n  - Failed: ${
+    `Validation Results:\n  - Passed: ${results.passed}\n  - Failed: ${
       results.failed
     }\n  - Skipped: ${results.skipped}\n  - Violations: ${JSON.stringify(
       results.violations,
@@ -30,7 +30,7 @@ async function checkResults(results, type) {
       2
     )}`
   )
-  core.error(`❌ ${results.failed} ${type} files failed validation`)
+  core.error(`❌ ${results.failed} files failed validation`)
   return false
 }
 
@@ -38,7 +38,7 @@ async function checkResults(results, type) {
 // :param jsonResults: the results of the json validation
 // :param yamlResults: the results of the yaml validation
 // :returns: the body of the PR comment
-async function constructBody(jsonResults, yamlResults) {
+async function constructBody(jsonResults) {
   var body = '## JSON and YAML Validation Results'
 
   if (jsonResults.success === false) {
@@ -60,25 +60,6 @@ async function constructBody(jsonResults, yamlResults) {
     )}\n\`\`\``
   }
 
-  if (yamlResults.success === false) {
-    body += dedent(`
-
-    ### YAML Validation Results
-
-    - ✅ File(s) Passed: ${yamlResults.passed}
-    - ❌ File(s) Failed: ${yamlResults.failed}
-    - ⏭️ File(s) Skipped: ${yamlResults.skipped}
-    
-    **Violations**: 
-
-    `)
-    body += `\`\`\`json\n${JSON.stringify(
-      yamlResults.violations,
-      null,
-      2
-    )}\n\`\`\``
-  }
-
   return body
 }
 
@@ -86,13 +67,12 @@ async function constructBody(jsonResults, yamlResults) {
 // :param jsonResults: the results of the json validation
 // :param yamlResults: the results of the yaml validation
 // :returns: true if the results are valid, false if they are not
-export async function processResults(jsonResults, yamlResults) {
+export async function processResults(jsonResults) {
   // check the json results
-  const jsonResult = await checkResults(jsonResults, 'JSON')
-  const yamlResult = await checkResults(yamlResults, 'YAML')
+  const jsonResult = await checkResults(jsonResults)
 
   // exit here if both JSON and YAML results are valid
-  if (jsonResult === true && yamlResult === true) {
+  if (jsonResult === true) {
     core.setOutput('success', `true`)
     return true
   }
@@ -112,7 +92,7 @@ export async function processResults(jsonResults, yamlResults) {
     )
 
     // build the body of the comment
-    const body = await constructBody(jsonResults, yamlResults)
+    const body = await constructBody(jsonResults)
 
     // add a comment to the pull request
     core.info(`📝 adding comment to PR #${context.issue.number}`)

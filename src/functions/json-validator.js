@@ -57,7 +57,7 @@ export async function jsonValidator(exclude) {
     violations: []
   }
 
-  const files = await glob('**/*{}yaml, yml}', {cwd: baseDirSanitized})
+  const files = await glob('**/*{yaml, yml}', {cwd: baseDirSanitized})
   for (const file of files) {
     // construct the full path to the file
     const fullPath = `${baseDirSanitized}/${file}`
