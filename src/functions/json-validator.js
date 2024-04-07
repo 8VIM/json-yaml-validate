@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import Ajv2019 from 'ajv/dist/2019'
 import addFormats from 'ajv-formats'
 import {readFileSync} from 'fs'
-import {globSync, glob} from 'glob'
+import {glob} from 'glob'
 import {parse} from 'yaml'
 
 const insensitivePattern = /\(\?i\)/
@@ -39,22 +39,11 @@ async function schema(schemaName, schemaDir) {
 // Helper function to validate all json files in the baseDir
 export async function jsonValidator(exclude) {
   const baseDir = core.getInput('base_dir').trim()
-  const jsonExtension = core.getInput('json_extension').trim()
-  const jsonExcludeRegex = core.getInput('json_exclude_regex').trim()
   const schemaDir = core.getInput('schema_dir').trim()
   const schemaName = core.getInput('schema_name').trim()
-  const yamlAsJson = core.getInput('yaml_as_json').trim() === 'true'
-  const yamlExtension = core.getInput('yaml_extension').trim()
-  const yamlExtensionShort = core.getInput('yaml_extension_short').trim()
 
   // remove trailing slash from baseDir
   const baseDirSanitized = baseDir.replace(/\/$/, '')
-
-  // check if regex is enabled
-  var skipRegex = null
-  if (jsonExcludeRegex && jsonExcludeRegex !== '') {
-    skipRegex = new RegExp(jsonExcludeRegex)
-  }
 
   // setup the schema (if provided)
   const validate = await schema(schemaName, schemaDir)
@@ -68,28 +57,10 @@ export async function jsonValidator(exclude) {
     violations: []
   }
 
-  const yamlGlob = `${yamlExtension.replace(
-    '.',
-    ''
-  )}, ${yamlExtensionShort.replace('.', '')}`
-
-  const glob = yamlAsJson
-    ? `**/*{${jsonExtension},${yamlGlob}}`
-    : `**/*${jsonExtension}`
-
-  const files = globSync(glob, {cwd: baseDirSanitized})
+  const files = await glob('**/*{}yaml, yml}', {cwd: baseDirSanitized})
   for (const file of files) {
     // construct the full path to the file
     const fullPath = `${baseDirSanitized}/${file}`
-
-    // If an exclude regex is provided, skip json files that match
-    if (skipRegex !== null) {
-      if (skipRegex.test(fullPath)) {
-        core.info(`skipping due to exclude match: ${fullPath}`)
-        result.skipped++
-        continue
-      }
-    }
 
     if (exclude.isExcluded(fullPath)) {
       core.info(`skipping due to exclude match: ${fullPath}`)
@@ -101,11 +72,7 @@ export async function jsonValidator(exclude) {
 
     try {
       // try to parse the file
-      if (fullPath.endsWith('.yaml')) {
-        data = parse(readFileSync(fullPath, 'utf8'))
-      } else {
-        data = JSON.parse(readFileSync(fullPath, 'utf8'))
-      }
+      data = parse(readFileSync(fullPath, 'utf8'))
     } catch {
       // if the json file is invalid, log an error and set success to false
       core.error(`❌ failed to parse JSON file: ${fullPath}`)
