@@ -55660,7 +55660,7 @@ const insensitivePattern = /\(\?i\)/
 
 async function schema(schemaName, schemaDir) {
   const baseDirSanitized = schemaDir.replace(/\/$/, '')
-  const files = await glob('*.json', {cwd: baseDirSanitized})
+  const files = await glob('**/*.json', {cwd: baseDirSanitized})
   const schemas = []
   for (const file of files) {
     const fullPath = `${baseDirSanitized}/${file}`
