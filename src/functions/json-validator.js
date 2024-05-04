@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import Ajv2019 from 'ajv/dist/2019'
+import Ajv2020 from 'ajv/dist/2020'
 import addFormats from 'ajv-formats'
 import {readFileSync} from 'fs'
 import {glob} from 'glob'
@@ -16,7 +16,7 @@ async function schema(schemaName, schemaDir) {
     const schema = JSON.parse(readFileSync(fullPath, 'utf8'))
     schemas.push(schema)
   }
-  const ajv = new Ajv2019({
+  const ajv = new Ajv2020({
     strict: false,
     code: {
       regExp: (pattern, u) => {
